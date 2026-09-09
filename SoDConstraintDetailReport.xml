@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<!--
+  SoD Constraint Detail Report (+ its report input form)
+  ======================================================
+  One row per SOD constraint across all SoD policies, with the left and right
+  conflicting role lists. A "Role separator" dropdown lets the user choose a
+  newline (stacked in one cell) or comma (inline) at run time.
+
+  This file contains TWO objects, imported in order:
+    1. Form           "SoD Constraint Detail Report Form"  - the dropdown
+    2. TaskDefinition "SoD Constraint Detail Report"       - references the form
+  The Form is declared first so the report's <Reference> resolves on import.
+
+  Requires the datasource class com.acme.reports.SodConstraintDataSource on the
+  IIQ classpath (WEB-INF/classes or a jar in WEB-INF/lib) plus a restart.
+
+  NOTE on subType: it only categorizes the report in the Reports UI. If the
+  report lands uncategorized, change it to a category that exists in your build.
+-->
+<sailpoint>
+
+  <!-- ================ 1. Report input form ================ -->
+  <Form name="SoD Constraint Detail Report Form">
+    <Section name="reportOptions" label="Report Options" columns="1">
+      <Field name="bundleSeparator"
+             displayName="Role separator (within a cell)"
+             type="string"
+             required="true"
+             value="New line">
+        <AllowedValues>
+          <String>New line</String>
+          <String>Comma</String>
+        </AllowedValues>
+      </Field>
+    </Section>
+  </Form>
+
+  <!-- ================ 2. Report definition ================ -->
+  <TaskDefinition name="SoD Constraint Detail Report"
+                  executor="sailpoint.reporting.LiveReportExecutor"
+                  subType="Policy Enforcement Reports"
+                  progressMode="Percentage"
+                  resultAction="Rename"
+                  template="true"
+                  type="LiveReport">
+
+    <Description>Lists every separation-of-duties constraint (rule) across all SoD policies, one row per constraint, with the left and right conflicting role lists. A run-time option selects a newline or comma separator between roles within a single CSV cell.</Description>
+
+    <Attributes>
+      <Map>
+        <entry key="report">
+          <value>
+            <LiveReport title="SoD Constraint Detail Report">
+
+              <DataSource dataSourceClass="co.issec.reports.SodConstraintDataSource"
+                          type="Java"/>
+
+              <!--
+                DTD in this version restricts <ReportForm> to a <Reference>.
+                The referenced Form (above) supplies the separator dropdown;
+                its value reaches the datasource initialize() arguments map
+                under the field name "bundleSeparator".
+              -->
+              <ReportForm>
+                <Reference class="sailpoint.object.Form"
+                           name="SoD Constraint Detail Report Form"/>
+              </ReportForm>
+
+              <!--
+                field names must match the map keys the datasource puts into
+                each row: policyName, policyType, constraintName, leftBundles,
+                rightBundles. sortable="false" because the datasource returns
+                rows pre-sorted by policy name and does not honor a UI sort.
+              -->
+              <Columns>
+                <ReportColumnConfig field="policyName"     header="Policy"      sortable="false" width="180"/>
+                <ReportColumnConfig field="policyType"     header="Policy Type" sortable="false" width="110"/>
+                <ReportColumnConfig field="constraintName" header="Constraint"  sortable="false" width="180"/>
+                <ReportColumnConfig field="leftBundles"    header="Left Roles"  sortable="false" width="240"/>
+                <ReportColumnConfig field="rightBundles"   header="Right Roles" sortable="false" width="240"/>
+              </Columns>
+
+            </LiveReport>
+          </value>
+        </entry>
+      </Map>
+    </Attributes>
+
+    <!--
+      Declares the report input so its value is marshaled into the
+      taskDefinition attribute map that the datasource initialize() receives.
+      The ReportForm above renders it as a dropdown; this makes it a
+      first-class argument. The argument name MUST match the form field name
+      ("bundleSeparator"), or the value won't line up on either side.
+    -->
+    <Signature>
+      <Inputs>
+        <Argument name="bundleSeparator" type="string"/>
+      </Inputs>
+    </Signature>
+
+  </TaskDefinition>
+
+</sailpoint>
