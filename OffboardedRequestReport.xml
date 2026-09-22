@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<!--
+  Combined import:
+    1. Form           "Offboarded Request Report Form"  - cut-off date + org levels
+    2. TaskDefinition "Offboarded Request Report"       - references the form
+  The Form is declared first so the report's <Reference> resolves on import.
+
+  Requires com.acme.reports.OffboardedRequestDataSource on the IIQ classpath
+  (WEB-INF/classes or a jar in WEB-INF/lib) plus a restart.
+
+  Input names must match in three places (Form field, Signature argument,
+  datasource constant):
+    cutOffDate  <->  ARG_CUTOFF
+    orgLevels   <->  ARG_ORG_LEVELS
+-->
+<sailpoint>
+
+  <!-- ================ 1. Report input form ================ -->
+  <Form name="Offboarded Request Report Form">
+    <Section name="reportOptions" label="Report Options" columns="1">
+      <Field name="cutOffDate"
+             displayName="Cut-off date (offboarding and request after this date)"
+             type="date"
+             required="true"/>
+      <Field name="orgLevels"
+             displayName="Org levels (comma-separated)"
+             type="string"
+             required="true"
+             value="A,B,C"/>
+    </Section>
+  </Form>
+
+  <!-- ================ 2. Report definition ================ -->
+  <TaskDefinition name="Offboarded Request Report"
+                  executor="sailpoint.reporting.LiveReportExecutor"
+                  subType="Identity and User Reports"
+                  progressMode="Percentage"
+                  resultAction="Rename"
+                  template="true"
+                  type="LiveReport">
+
+    <Description>Identities in the selected org levels who either have an ABC link, or were offboarded after the cut-off date and have an ABC access request created after the cut-off date.</Description>
+
+    <Attributes>
+      <Map>
+        <entry key="report">
+          <value>
+            <LiveReport title="Offboarded Request Report">
+
+              <DataSource dataSourceClass="com.acme.reports.OffboardedRequestDataSource"
+                          type="Java"/>
+
+              <ReportForm>
+                <Reference class="sailpoint.object.Form"
+                           name="Offboarded Request Report Form"/>
+              </ReportForm>
+
+              <!-- field names must match the row keys set in the datasource -->
+              <Columns>
+                <ReportColumnConfig field="identityName"    header="Identity"         sortable="false" width="110"/>
+                <ReportColumnConfig field="displayName"     header="Display Name"     sortable="false" width="150"/>
+                <ReportColumnConfig field="orgLevel"        header="Org Level"        sortable="false" width="80"/>
+                <ReportColumnConfig field="offboardingDate" header="Offboarding Date" sortable="false" width="110"/>
+                <ReportColumnConfig field="reason"          header="Reason"           sortable="false" width="180"/>
+              </Columns>
+
+            </LiveReport>
+          </value>
+        </entry>
+      </Map>
+    </Attributes>
+
+    <!-- Marshals the form values into the arguments map passed to initialize() -->
+    <Signature>
+      <Inputs>
+        <Argument name="cutOffDate" type="date"/>
+        <Argument name="orgLevels"  type="string"/>
+      </Inputs>
+    </Signature>
+
+  </TaskDefinition>
+
+</sailpoint>
